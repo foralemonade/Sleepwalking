@@ -10,12 +10,12 @@ var current_shield: int = 100
 var shield_regen: float = 0.0
 
 @export var slot_count: int = 4
-var creature_slots = []
-var slot_positions = []
-var current_creature_ids = []
+var creature_slots: Array[Dictionary] = []
+var slot_positions: Array[Vector2] = []
+var current_creature_ids: Array[String] = []
 
-var synergy_system = null
-var enemy_container = null
+var synergy_system: Node = null
+var enemy_container: Node = null
 
 func _ready():
 	current_shield = max_shield
@@ -38,9 +38,17 @@ func _ready():
 	add_child(synergy_system)
 	_draw_castle()
 
-func _process(delta):
-	if shield_regen > 0.0 and current_shield < max_shield:
-		var new_shield = float(current_shield) + shield_regen * delta
+func _process(delta: float) -> void:
+	var total_regen: float = shield_regen
+	# 挑战模式卡牌加成: 治愈光环
+	if GameData.world_progress.get("challenge_active", false):
+		total_regen += _get_challenge_regen_bonus()
+	# 背水一战: 低血量时
+	if GameData.world_progress.get("challenge_active", false) and current_shield < max_shield * 0.3:
+		total_regen += 1.0
+
+	if total_regen > 0.0 and current_shield < max_shield:
+		var new_shield: float = float(current_shield) + total_regen * delta
 		if new_shield > float(max_shield):
 			new_shield = float(max_shield)
 		current_shield = int(new_shield)
@@ -50,14 +58,14 @@ func _draw_castle():
 	var sprite = Sprite2D.new()
 	var s = 160
 	var img = Image.create(s, s, false, Image.FORMAT_RGBA8)
-	img.fill_rect(Rect2i(10, 30, s - 20, s - 40), Color(0.35, 0.3, 0.5))
-	img.fill_rect(Rect2i(20, 10, s - 40, 25), Color(0.45, 0.4, 0.6))
+	img.fill_rect(Rect2i(10, 30, s - 20, s - 40), Color(0.45, 0.40, 0.65))
+	img.fill_rect(Rect2i(20, 10, s - 40, 25), Color(0.55, 0.50, 0.72))
 	var win_positions = [30, 70, 110]
 	for wx in win_positions:
-		img.fill_rect(Rect2i(wx, 50, 20, 20), Color(0.7, 0.7, 1.0, 0.6))
-	img.fill_rect(Rect2i(65, 100, 30, 50), Color(0.25, 0.2, 0.4))
-	img.fill_rect(Rect2i(10, 130, 30, 20), Color(0.3, 0.3, 0.3))
-	img.fill_rect(Rect2i(120, 130, 30, 20), Color(0.3, 0.3, 0.3))
+		img.fill_rect(Rect2i(wx, 50, 20, 20), Color(0.75, 0.75, 1.0, 0.8))
+	img.fill_rect(Rect2i(65, 100, 30, 50), Color(0.35, 0.28, 0.50))
+	img.fill_rect(Rect2i(10, 130, 30, 20), Color(0.40, 0.35, 0.45))
+	img.fill_rect(Rect2i(120, 130, 30, 20), Color(0.40, 0.35, 0.45))
 	var tex = ImageTexture.new()
 	tex.set_image(img)
 	sprite.texture = tex
@@ -130,12 +138,23 @@ func take_damage(amount: int):
 		castle_destroyed.emit()
 		EventBus.castle_destroyed.emit()
 
-func get_placed_creatures() -> Array:
-	var r = []
+func get_placed_creatures() -> Array[Node]:
+	var r: Array[Node] = []
 	for slot in creature_slots:
 		if slot["creature"] != null:
 			r.append(slot["creature"])
 	return r
 
-func set_enemy_container(container: Node):
+func set_enemy_container(container: Node) -> void:
 	enemy_container = container
+
+func _get_challenge_regen_bonus() -> float:
+	var parent: Node = get_parent()
+	while parent:
+		if parent.has_node("ChallengeManager"):
+			var cm: Node = parent.get_node("ChallengeManager")
+			if cm.has_method("get_active_card_bonus"):
+				return cm.get_active_card_bonus("regen")
+			break
+		parent = parent.get_parent()
+	return 0.0

@@ -38,7 +38,7 @@ var _faction_tag = {
 	GameData.Faction.MEMORY: "memory",
 }
 
-func analyze_synergies(creature_ids) -> Dictionary:
+func analyze_synergies(creature_ids: Array[String]) -> Dictionary:
 	var result = {
 		"faction_synergy": {},
 		"cross_reactions": [],

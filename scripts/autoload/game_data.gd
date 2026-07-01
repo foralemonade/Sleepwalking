@@ -23,11 +23,11 @@ const FACTION_NAMES: Dictionary = {
 }
 
 const FACTION_COLORS: Dictionary = {
-	Faction.TECH: Color(0.3, 0.7, 0.9),
-	Faction.FAITH: Color(0.9, 0.8, 0.3),
-	Faction.NATURE: Color(0.3, 0.8, 0.4),
-	Faction.COMMERCE: Color(0.9, 0.5, 0.2),
-	Faction.MEMORY: Color(0.7, 0.4, 0.9),
+	Faction.TECH: Color(0.55, 0.80, 0.95),     # 冰蓝
+	Faction.FAITH: Color(0.95, 0.78, 0.82),     # 柔粉
+	Faction.NATURE: Color(0.68, 0.92, 0.82),    # 薄荷绿
+	Faction.COMMERCE: Color(0.95, 0.82, 0.72),   # 浅珊瑚
+	Faction.MEMORY: Color(0.78, 0.65, 0.95),     # 浅紫丁香
 }
 
 # ============================================================

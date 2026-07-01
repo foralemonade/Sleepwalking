@@ -11,3 +11,7 @@ Thumbs.db
 
 # Export
 export/
+
+# IDE / tools
+.vscode/
+.workbuddy/

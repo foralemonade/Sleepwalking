@@ -1,8 +1,9 @@
 ﻿extends Node
 class_name WorldMapManager
-## 大地图探索系统
+## 大地图探索系统 (Autoload)
+## 管理所有世界节点和大陆数据
 
-var node_database = {}
+var node_database: Dictionary = {}
 
 func _ready():
 	_init_node_database()

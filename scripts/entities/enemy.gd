@@ -25,7 +25,7 @@ var attack_slow_timer: float = 0.0
 var attack_slow_factor: float = 1.0
 var vulnerable_stacks: int = 0
 var vulnerable_mult: float = 1.0
-var dot_effects: Array = []
+var dot_effects: Array[Dictionary] = []
 var flash_timer: float = 0.0
 var original_modulate: Color = Color.WHITE
 var hp_bar: ColorRect = null
@@ -40,10 +40,10 @@ func _init_enemy():
 	original_modulate = Color.WHITE
 	modulate = original_modulate
 	if is_elite:
-		modulate = Color(1.0, 0.7, 0.3)
+		modulate = Color(0.95, 0.75, 0.55)
 		scale = Vector2(1.3, 1.3)
 	if is_boss:
-		modulate = Color(1.0, 0.2, 0.2)
+		modulate = Color(0.85, 0.40, 0.45)
 		scale = Vector2(2.0, 2.0)
 	original_modulate = modulate
 	_draw_enemy_sprite()
@@ -95,12 +95,18 @@ func _process(delta):
 	_move_along_path(delta)
 	_update_hp_bar()
 
-func _move_along_path(delta):
+func _move_along_path(delta: float) -> void:
+	var speed_mult: float = slow_factor
+	# 挑战模式: 减速力场
+	if GameData.world_progress.get("challenge_active", false):
+		var challenge_slow: float = _get_challenge_slow_bonus()
+		if challenge_slow > 0.0:
+			speed_mult = speed_mult * (1.0 - challenge_slow)
 	if path_follow == null:
-		position.x += move_speed * slow_factor * delta
+		position.x += move_speed * speed_mult * delta
 	else:
-		path_progress += move_speed * slow_factor * delta
-		var path_length = path_follow.curve.get_baked_length()
+		path_progress += move_speed * speed_mult * delta
+		var path_length: float = path_follow.curve.get_baked_length()
 		if path_progress >= path_length:
 			_reach_end()
 			return
@@ -172,16 +178,27 @@ func apply_vulnerable(ratio: float, duration: float, max_stacks: int):
 		vulnerable_mult = 1.0 + vulnerable_stacks * ratio
 	)
 
-func apply_attack_slow(factor: float, duration: float):
+func apply_attack_slow(factor: float, duration: float) -> void:
 	attack_slowed = true
 	attack_slow_factor = 1.0 - factor
 	attack_slow_timer = duration
+
+func _get_challenge_slow_bonus() -> float:
+	var parent: Node = get_parent()
+	while parent:
+		if parent.has_node("ChallengeManager"):
+			var cm: Node = parent.get_node("ChallengeManager")
+			if cm.has_method("get_active_card_bonus"):
+				return cm.get_active_card_bonus("slow")
+			break
+		parent = parent.get_parent()
+	return 0.0
 
 func _create_hp_bar():
 	hp_bar_bg = ColorRect.new()
 	hp_bar_bg.size = Vector2(40, 5)
 	hp_bar_bg.position = Vector2(-20, -30)
-	hp_bar_bg.color = Color(0.2, 0.2, 0.2)
+	hp_bar_bg.color = Color(0.30, 0.25, 0.38)
 	add_child(hp_bar_bg)
 	hp_bar = ColorRect.new()
 	hp_bar.size = Vector2(40, 5)
@@ -195,11 +212,11 @@ func _update_hp_bar():
 	var ratio = current_health / max_health
 	hp_bar.size.x = 40.0 * ratio
 	if ratio < 0.3:
-		hp_bar.color = Color.RED
+		hp_bar.color = Color(0.95, 0.55, 0.60)
 	elif ratio < 0.6:
-		hp_bar.color = Color.ORANGE
+		hp_bar.color = Color(0.95, 0.75, 0.55)
 	else:
-		hp_bar.color = Color.GREEN
+		hp_bar.color = Color(0.55, 0.88, 0.72)
 
 func _draw_enemy_sprite():
 	for child in get_children():
@@ -218,15 +235,15 @@ func _draw_enemy_sprite():
 	var img = Image.create(size, size, false, Image.FORMAT_RGBA8)
 	var bc = Color.GRAY
 	if enemy_type == "basic":
-		bc = Color(0.7, 0.3, 0.3)
+		bc = Color(0.75, 0.55, 0.55)
 	elif enemy_type == "fast":
-		bc = Color(0.9, 0.7, 0.2)
+		bc = Color(0.90, 0.80, 0.55)
 	elif enemy_type == "tank":
-		bc = Color(0.3, 0.3, 0.5)
+		bc = Color(0.50, 0.45, 0.65)
 	elif enemy_type == "elite":
-		bc = Color(1.0, 0.6, 0.1)
+		bc = Color(0.95, 0.75, 0.55)
 	elif enemy_type == "boss":
-		bc = Color(0.8, 0.1, 0.1)
+		bc = Color(0.85, 0.40, 0.45)
 	var cx = float(size) / 2.0
 	var cy = float(size) / 2.0
 	var r = float(size) / 2.0 - 2.0

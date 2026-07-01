@@ -1,4 +1,5 @@
 ﻿extends RefCounted
+class_name WaveConfigs
 ## 波次配置数据 - 各大陆不同难度的预设波次
 
 static func get_default_waves() -> Array[Dictionary]:

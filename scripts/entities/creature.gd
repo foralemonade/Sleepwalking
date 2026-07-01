@@ -60,11 +60,11 @@ func setup(data: Dictionary):
 	_draw_sprite()
 	attack_line = Line2D.new()
 	attack_line.width = 2.0
-	attack_line.default_color = Color(1.0, 1.0, 1.0, 0.6)
+	attack_line.default_color = Color(0.85, 0.80, 1.0, 0.5)
 	attack_line.visible = false
 	add_child(attack_line)
 
-func apply_synergy_effects(result: Dictionary):
+func apply_synergy_effects(result: Dictionary) -> void:
 	synergy_attack_bonus = result.get("global_attack_bonus", 0.0)
 	synergy_speed_bonus = result.get("global_speed_bonus", 0.0)
 	synergy_range_bonus = result.get("global_range_bonus", 0.0)
@@ -79,23 +79,54 @@ func apply_synergy_effects(result: Dictionary):
 	tech_extra_attack = result.get("tech_attack_bonus", 0.0)
 	faith_extra_speed = result.get("faith_speed_bonus", 0.0)
 
+	# 挑战模式卡牌加成
+	var challenge_bonus: float = _get_challenge_bonus()
+
 	if creature_data.has("gold_to_attack"):
-		var g = float(GameData.resources["gold"])
+		var g: int = int(GameData.resources["gold"])
 		stacking_bonus = int(g / 100.0) * creature_data["gold_to_attack"]
 
-	var total_attack = 1.0 + synergy_attack_bonus + trade_attack_bonus + stacking_bonus
+	var total_attack: float = 1.0 + synergy_attack_bonus + trade_attack_bonus + stacking_bonus + challenge_bonus
 	if faction == GameData.Faction.TECH:
 		total_attack = total_attack + tech_extra_attack
 	attack_power = base_attack * total_attack
 
-	var total_speed = 1.0 + synergy_speed_bonus
+	var total_speed: float = 1.0 + synergy_speed_bonus
 	if faction == GameData.Faction.FAITH:
 		total_speed = total_speed + faith_extra_speed
+	# 挑战模式狂暴卡牌
+	total_speed += _get_challenge_speed_bonus()
 	attack_speed = base_speed * total_speed
 	if attack_speed < 0.1:
 		attack_speed = 0.1
 	attack_cooldown = 1.0 / attack_speed
 	attack_range = base_range * (1.0 + synergy_range_bonus)
+
+func _get_challenge_bonus() -> float:
+	if not GameData.world_progress.get("challenge_active", false):
+		return 0.0
+	var bonus: float = 0.0
+	bonus += _find_battle_controller_challenge_bonus("synergy")
+	bonus += _find_battle_controller_challenge_bonus("attack")
+	return bonus
+
+func _get_challenge_speed_bonus() -> float:
+	if not GameData.world_progress.get("challenge_active", false):
+		return 0.0
+	return _find_battle_controller_challenge_bonus("speed")
+
+func _find_battle_controller_challenge_bonus(stat: String) -> float:
+	# 向上查找 BattleController 获取 ChallengeManager
+	var parent: Node = get_parent()
+	while parent:
+		if parent.has_method("_draw"):  # BattleController 有 _draw
+			if parent.has_node("ChallengeManager"):
+				var cm: Node = parent.get_node("ChallengeManager")
+				if cm.has_method("get_active_card_bonus"):
+					return cm.get_active_card_bonus(stat)
+			break
+		parent = parent.get_parent()
+	return 0.0
 
 func _process(delta):
 	aoe_timer = aoe_timer - delta
@@ -163,12 +194,18 @@ func _find_best_target():
 		)
 	return candidates[0]
 
-func _attack_target(target: Enemy):
-	var dmg = attack_power
+func _attack_target(target: Enemy) -> void:
+	var dmg: float = attack_power
 
+	# 生物自身技能: 暴击
 	if creature_data.has("skill_chance"):
 		if randf() < creature_data["skill_chance"]:
 			dmg = dmg * creature_data["skill_multiplier"]
+
+	# 挑战卡牌: 暴击率
+	var challenge_crit: float = _find_battle_controller_challenge_bonus("crit")
+	if challenge_crit > 0.0 and randf() < challenge_crit:
+		dmg = dmg * 2.0
 
 	if creature_data.has("anti_shield_bonus") and target.armor > 0.0:
 		dmg = dmg * (1.0 + creature_data["anti_shield_bonus"])
@@ -183,16 +220,20 @@ func _attack_target(target: Enemy):
 		_do_chain_lightning(target, dmg)
 
 	if has_cross_dot:
-		var dot_dmg = attack_power * cross_dot_ratio / cross_dot_duration
+		var dot_dmg: float = attack_power * cross_dot_ratio / cross_dot_duration
 		target.apply_dot(dot_dmg, cross_dot_duration)
 
 	if creature_data.has("burn_ratio"):
-		var burn_dmg = attack_power * creature_data["burn_ratio"] / creature_data["burn_duration"]
+		var burn_dmg: float = attack_power * creature_data["burn_ratio"] / creature_data["burn_duration"]
 		target.apply_dot(burn_dmg, creature_data["burn_duration"])
 
 	if creature_data.has("poison_ratio"):
-		var poison_dmg = attack_power * creature_data["poison_ratio"] / creature_data["poison_duration"]
+		var poison_dmg: float = attack_power * creature_data["poison_ratio"] / creature_data["poison_duration"]
 		target.apply_dot(poison_dmg, creature_data["poison_duration"])
+
+	# 挑战卡牌: 淬毒
+	if _find_battle_controller_challenge_bonus("poison") > 0.0:
+		target.apply_dot(attack_power * 0.1, 3.0)
 
 	if creature_data.has("slow_factor"):
 		target.apply_slow(creature_data["slow_factor"], creature_data["slow_duration"])
@@ -207,9 +248,9 @@ func _attack_target(target: Enemy):
 		target.apply_vulnerable(creature_data["vulnerable_ratio"], creature_data["vulnerable_duration"], creature_data.get("max_stacks", 3))
 
 	if creature_data.has("echo_ratio"):
-		var echo_dmg = dmg * creature_data["echo_ratio"]
-		var echo_delay = creature_data.get("echo_delay", 0.3)
-		var t = target
+		var echo_dmg: float = dmg * creature_data["echo_ratio"]
+		var echo_delay: float = creature_data.get("echo_delay", 0.3)
+		var t: Enemy = target
 		get_tree().create_timer(echo_delay).timeout.connect(func():
 			if is_instance_valid(t) and t.is_alive:
 				t.take_damage(echo_dmg)
@@ -220,6 +261,11 @@ func _attack_target(target: Enemy):
 
 	if creature_data.has("gold_chance") and randf() < creature_data["gold_chance"]:
 		GameData.add_resource("gold", creature_data["gold_amount"])
+
+	# 挑战卡牌: 淘金热
+	var gold_bonus: float = _find_battle_controller_challenge_bonus("gold")
+	if gold_bonus > 0.0 and randf() < 0.3:
+		GameData.add_resource("gold", int(5 * gold_bonus))
 
 func _do_chain_lightning(initial_target: Enemy, damage: float):
 	var chain_targets = [initial_target]

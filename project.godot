@@ -23,6 +23,14 @@ config/icon="res://icon.svg"
 
 GameData="*res://scripts/autoload/game_data.gd"
 EventBus="*res://scripts/autoload/event_bus.gd"
+WorldMap="*res://scripts/systems/world_map_manager.gd"
+SaveManager="*res://scripts/autoload/save_manager.gd"
+
+[debug]
+
+gdscript/warnings/unused_variable=0
+gdscript/warnings/unused_signal=0
+gdscript/warnings/static_called_on_instance=0
 
 [display]
 
@@ -41,4 +49,4 @@ common/enable_pause_aware_picking=true
 [rendering]
 
 renderer/rendering_method="mobile"
-environment/default_clear_color=Color(0.08, 0.06, 0.15, 1)
+environment/default_clear_color=Color(0.18, 0.14, 0.28, 1)

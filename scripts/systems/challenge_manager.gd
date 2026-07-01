@@ -68,7 +68,7 @@ func add_score(points: int):
 	challenge_score += points
 
 func get_active_card_bonus(stat: String) -> float:
-	var bonus = 0.0
+	var bonus: float = 0.0
 	for card in active_cards:
 		match card["id"]:
 			"resonance_amp": if stat=="synergy": bonus+=0.30
@@ -78,4 +78,5 @@ func get_active_card_bonus(stat: String) -> float:
 			"healing_aura": if stat=="regen": bonus+=2.0
 			"slow_field": if stat=="slow": bonus+=0.15
 			"double_energy": if stat=="energy": bonus+=1.0
+			"poison_blade": if stat=="poison": bonus+=1.0
 	return bonus

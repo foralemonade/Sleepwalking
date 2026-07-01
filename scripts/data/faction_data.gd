@@ -1,4 +1,5 @@
 ﻿extends RefCounted
+class_name FactionData
 ## 派系数据 - 各大洲地形描述、派系背景
 
 static func get_faction_lore(faction: int) -> Dictionary:
