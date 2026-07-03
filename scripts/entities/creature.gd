@@ -161,9 +161,13 @@ func take_damage(amount: float) -> void:
 	if is_dead:
 		return
 	current_hp = maxf(0.0, current_hp - amount)
+	# 同步写回 GameData(跨局继承 + 死亡检查 + UI 读取都靠它)
+	if GameData.creature_health.has(creature_id):
+		GameData.creature_health[creature_id]["current_hp"] = current_hp
 	_update_injury_stage()
 	_update_hp_bar()
 	_update_injury_visual()
+	EventBus.creature_health_changed.emit(creature_id, current_hp, max_hp)
 
 	if current_hp <= 0.0:
 		_die()
@@ -172,9 +176,13 @@ func heal(amount: float) -> void:
 	if is_dead:
 		return
 	current_hp = minf(max_hp, current_hp + amount)
+	# 同步写回 GameData
+	if GameData.creature_health.has(creature_id):
+		GameData.creature_health[creature_id]["current_hp"] = current_hp
 	_update_injury_stage()
 	_update_hp_bar()
 	_update_injury_visual()
+	EventBus.creature_health_changed.emit(creature_id, current_hp, max_hp)
 
 func _update_injury_stage() -> void:
 	var ratio: float = current_hp / max_hp if max_hp > 0.0 else 0.0

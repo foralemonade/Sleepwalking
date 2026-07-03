@@ -458,6 +458,8 @@ func update_injury_stage(cid: String) -> void:
 	else:
 		creature_health[cid]["stage"] = InjuryStage.HEALTHY
 	creature_health[cid]["is_dead"] = (creature_health[cid]["stage"] == InjuryStage.DEAD)
+	# 通知 UI 刷新血条
+	EventBus.creature_health_changed.emit(cid, creature_health[cid]["current_hp"], creature_health[cid]["max_hp"])
 
 ## 生物受伤 — 战斗中调用
 func creature_take_damage(cid: String, amount: float) -> void:

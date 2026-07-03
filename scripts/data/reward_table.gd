@@ -2,6 +2,7 @@ extends Node
 class_name RewardTable
 ## 关卡奖励表 — 每个节点首通固定奖励 + 重复通关奖励
 ## 企划书 10.2: 确定性奖励 + 同名生物第二只逻辑
+## 方法均为 static — 通过 RewardTable.grant_reward(...) 直接调用,无需实例化
 
 # 每个节点的首通奖励: { node_id: { "creature": cid, "gold": int, "items": {item_id: count}, "rep": {faction: amount} } }
 const FIRST_CLEAR_REWARDS: Dictionary = {
@@ -30,7 +31,8 @@ const REPEAT_GOLD_RATIO: float = 0.30
 const REPEAT_DUPLICATE_CHANCE: float = 0.50
 
 ## 发放关卡奖励 — 返回 { "creature_added": cid_or_empty, "gold": int, "items": Dictionary, "is_first_clear": bool }
-func grant_reward(node_id: String) -> Dictionary:
+## 给节点发奖 — 静态方法,直接 RewardTable.grant_reward("tech_01") 调用
+static func grant_reward(node_id: String) -> Dictionary:
 	if not FIRST_CLEAR_REWARDS.has(node_id):
 		return {"creature_added":"", "gold":0, "items":{}, "is_first_clear":false}
 	var reward: Dictionary = FIRST_CLEAR_REWARDS[node_id]
@@ -52,7 +54,7 @@ func grant_reward(node_id: String) -> Dictionary:
 
 	return result
 
-func _grant_first_clear(reward: Dictionary, result: Dictionary) -> void:
+static func _grant_first_clear(reward: Dictionary, result: Dictionary) -> void:
 	# 1) 生物(永远给)
 	var cid: String = reward.get("creature", "")
 	if cid != "" and GameData.creature_database.has(cid):
@@ -82,7 +84,7 @@ func _grant_first_clear(reward: Dictionary, result: Dictionary) -> void:
 		"yes", result["creature_added"], result["gold"], str(result["items"])
 	])
 
-func _grant_repeat_clear(reward: Dictionary, result: Dictionary) -> void:
+static func _grant_repeat_clear(reward: Dictionary, result: Dictionary) -> void:
 	# 30% 金币
 	var base_gold: int = reward.get("gold", 0)
 	var gold: int = int(base_gold * REPEAT_GOLD_RATIO)
@@ -101,7 +103,7 @@ func _grant_repeat_clear(reward: Dictionary, result: Dictionary) -> void:
 	])
 
 ## 获取节点的奖励预览(UI显示)
-func get_reward_preview(node_id: String) -> Dictionary:
+static func get_reward_preview(node_id: String) -> Dictionary:
 	if not FIRST_CLEAR_REWARDS.has(node_id):
 		return {}
 	var reward: Dictionary = FIRST_CLEAR_REWARDS[node_id]
